@@ -12,7 +12,7 @@ A specialized **Computer Vision Workspace** that analyzes wall imagery to provid
 ### 🔍 Segment & Classify
 - Detect and differentiate wall defects:
   - Algae
-  -Major cracks and minor cracks 
+  - Major cracks and minor cracks 
   - Normal
   - Peeling
   - Spalling
