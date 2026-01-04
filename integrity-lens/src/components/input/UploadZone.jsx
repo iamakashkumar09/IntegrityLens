@@ -25,24 +25,42 @@ export default function UploadZone({ onAnalyzeStart, onAnalyzeComplete }) {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  // inside components/input/UploadZone.jsx
+
   const runAnalysis = async () => {
     if (!file) return;
 
     setIsScanning(true);
     onAnalyzeStart();
 
-    // --- MOCK API CALL ---
-    const res = await fetch("/api/analyze", { 
-        method: "POST",
-        body: new FormData() 
-    });
-    
-    const data = await res.json();
+    try {
+      // 1. Wrap the file in FormData
+      const formData = new FormData();
+      // The key "file" here must match 'formData.get("file")' in the API Route
+      formData.append("file", file); 
 
-    setTimeout(() => {
-        onAnalyzeComplete(data);
-        setIsScanning(false);
-    }, 2000);
+      // 2. Send to Next.js API
+      const res = await fetch("/api/analyze", { 
+          method: "POST",
+          body: formData 
+      });
+
+      if (!res.ok) throw new Error("Analysis failed");
+      
+      const data = await res.json();
+
+      // 3. Update State
+      // We keep the timeout just for the cool animation effect :)
+      setTimeout(() => {
+          onAnalyzeComplete(data);
+          setIsScanning(false);
+      }, 1500);
+
+    } catch (error) {
+      console.error(error);
+      setIsScanning(false);
+      alert("Something went wrong with the analysis.");
+    }
   };
 
   return (

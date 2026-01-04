@@ -1,35 +1,42 @@
+// app/api/analyze/route.js
 import { NextResponse } from 'next/server';
 
 export async function POST(request) {
-  // In a real app, parse the formData:
-  // const formData = await request.formData();
-  
-  // --- REAL PYTHON CONNECTION (Uncomment when ready) ---
-  /*
   try {
-    const pythonRes = await fetch('http://localhost:8000/predict', {
-       method: 'POST',
-       body: formData
+    // 1. Receive the form data from the Frontend
+    const formData = await request.formData();
+    const file = formData.get("file"); // "file" must match the key used in UploadZone
+
+    if (!file) {
+      return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+    }
+
+    // 2. Prepare to send it to Python
+    // We need to create a NEW FormData to send to the Python backend
+    const backendFormData = new FormData();
+    backendFormData.append("file", file); 
+
+    // 3. Call the Python API (FastAPI running on port 8000)
+    const pythonResponse = await fetch("http://127.0.0.1:8000/predict", {
+      method: "POST",
+      body: backendFormData,
+      // Note: Do NOT set Content-Type header manually here, 
+      // fetch sets the multipart boundary automatically.
     });
-    const data = await pythonRes.json();
+
+    if (!pythonResponse.ok) {
+      throw new Error(`Python API Error: ${pythonResponse.statusText}`);
+    }
+
+    // 4. Get the JSON from Python and return it to the Frontend
+    const data = await pythonResponse.json();
     return NextResponse.json(data);
+
   } catch (error) {
-    return NextResponse.json({ error: "Model offline" }, { status: 500 });
+    console.error("Analysis failed:", error);
+    return NextResponse.json(
+      { error: "Failed to analyze image", details: error.message },
+      { status: 500 }
+    );
   }
-  */
-
-  // --- MOCK RESPONSE ---
-  // We use this dummy data to make the UI work without the python backend connected yet.
-  const mockResponse = {
-    score: 42,
-    status: "Critical",
-    summary: "Structural integrity is compromised. Significant spalling detected in the upper quadrant with associated moisture ingress (algae). Immediate professional inspection recommended.",
-    defects: [
-      { type: "Spalling", confidence: 94, count: 2 },
-      { type: "Algae", confidence: 88, count: 1 },
-      { type: "Major Crack", confidence: 76, count: 1 },
-    ]
-  };
-
-  return NextResponse.json(mockResponse);
 }
