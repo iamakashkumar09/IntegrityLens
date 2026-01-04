@@ -29,7 +29,9 @@ export default function DefectCard({ defect, index }) {
         </div>
       </div>
       <div className="text-right">
-        <span className="block text-sm font-bold text-slate-900">{defect.confidence}%</span>
+        <span className="block text-sm font-bold text-slate-900">
+          {Number(defect.confidence).toFixed(2)}%
+        </span>
         <span className="text-xs text-slate-400">Confidence</span>
       </div>
     </motion.div>
