@@ -10,7 +10,15 @@ export default function ResultsPanel({ result, isLoading }) {
   const [remedies, setRemedies] = useState(null);
   const [isRemedyLoading, setIsRemedyLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [remedies, setRemedies] = useState(null);
+  const [isRemedyLoading, setIsRemedyLoading] = useState(false);
+  const [error, setError] = useState(null);
 
+  React.useEffect(() => {
+    setRemedies(null);       // Clear the old text
+    setError(null);          // Clear old errors
+    setIsRemedyLoading(false); 
+  }, [result]);
   // --- MANUAL TRIGGER FUNCTION ---
   const handleGenerateRemedy = async () => {
     if (!result || result.error) return;
