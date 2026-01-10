@@ -1,29 +1,64 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
-import { FileText, ArrowRight, AlertTriangle, Leaf, Droplets, Activity } from "lucide-react";
+import { FileText, ArrowRight, AlertTriangle, Leaf, Droplets, Activity, Sparkles, Hammer } from "lucide-react";
 import HealthRing from "./HealthRing";
 import DefectCard from "./DefectCard";
 
 export default function ResultsPanel({ result, isLoading }) {
-  
-  // 1. SAFETY CHECK: Handle backend errors gracefully
+  const [remedies, setRemedies] = useState(null);
+  const [isRemedyLoading, setIsRemedyLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // --- MANUAL TRIGGER FUNCTION ---
+  const handleGenerateRemedy = async () => {
+    if (!result || result.error) return;
+
+    setIsRemedyLoading(true);
+    setError(null);
+
+    try {
+      const topDefect = result.defects?.[0]?.type || "General Defect";
+
+      const response = await fetch('/api/remedies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          defectType: topDefect,
+          score: result.score
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) throw new Error(data.error || "Failed to fetch");
+
+      if (data.remedies) {
+        setRemedies(data.remedies);
+      }
+    } catch (err) {
+      console.error("Failed to fetch remedies:", err);
+      setError("Could not generate plan. Please try again.");
+    } finally {
+      setIsRemedyLoading(false);
+    }
+  };
+
+  // --- SAFETY CHECKS ---
   if (result?.error) {
     return (
       <div className="p-6 bg-red-50 border border-red-200 rounded-xl text-red-700 text-center">
         <h3 className="font-bold text-lg mb-2">Analysis Error</h3>
         <p>{result.error}</p>
-        <p className="text-sm mt-2 opacity-75">Check your Python backend terminal for details.</p>
       </div>
     );
   }
 
-  // Helper to choose icons based on defect type
   const getIcon = (type) => {
     if (type.includes("Vegetation")) return <Leaf size={14} />;
     if (type.includes("Stains")) return <Droplets size={14} />;
-    if (type.includes("Cracks") || type.includes("Spalling")) return <AlertTriangle size={14} />;
+    if (type.includes("Cracks")) return <AlertTriangle size={14} />;
     return <Activity size={14} />;
   };
 
@@ -34,117 +69,110 @@ export default function ResultsPanel({ result, isLoading }) {
           key="results"
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
           className="space-y-6"
         >
-          {/* --- 1. MAIN SCORE CARD --- */}
+          {/* 1. SCORE CARD */}
           <div className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200/50 border border-slate-100">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-2xl font-bold text-slate-900">Wall Health</h2>
                 <p className="text-slate-500 text-sm">AI-Based Structural Assessment</p>
               </div>
-              <span
-                className={`px-4 py-1 rounded-full text-sm font-bold uppercase tracking-wide ${
-                  result.status === "Critical"
-                    ? "bg-rose-100 text-rose-700"
-                    : result.status === "Caution" 
-                    ? "bg-amber-100 text-amber-700"
-                    : "bg-emerald-100 text-emerald-700"
-                }`}
-              >
-                {result.status || "Unknown"}
+              <span className={`px-4 py-1 rounded-full text-sm font-bold uppercase ${result.status === "Critical" ? "bg-rose-100 text-rose-700" : "bg-emerald-100 text-emerald-700"
+                }`}>
+                {result.status}
               </span>
             </div>
 
             <div className="flex items-center gap-8">
-              {/* Score Ring */}
-              <HealthRing score={result.score || 0} />
-              
-              {/* --- NEW: Dynamic Model Stats --- */}
-              <div className="flex-1 space-y-4">
-                <div className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-2">
-                  Primary Detection
-                </div>
-                {Array.isArray(result.defects) && result.defects.length > 0 ? (
-                   <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className={`p-2 rounded-lg ${result.status === 'Safe' ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'}`}>
-                           {getIcon(result.defects[0].type)}
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-slate-900">{result.defects[0].type}</h4>
-                          <p className="text-xs text-slate-500">Highest Confidence Match</p>
-                        </div>
-                      </div>
-                      <div className="w-full bg-slate-200 rounded-full h-2 mt-2">
-                        <motion.div 
-                          initial={{ width: 0 }}
-                          animate={{ width: `${result.defects[0].confidence}%` }}
-                          className="bg-blue-600 h-2 rounded-full"
-                        />
-                      </div>
-                      <div className="text-right text-xs font-bold text-blue-600 mt-1">
-                        {Number(result.defects[0].confidence).toFixed(2)}% Confidence
-                      </div>
-                   </div>
-                ) : (
-                  <p className="text-sm text-slate-400">No specific defects identified.</p>
-                )}
+              <HealthRing score={result.score} />
+              <div className="flex-1">
+                {result.defects?.[0] ? (
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    <div className="flex items-center gap-2 font-bold text-slate-700">
+                      {getIcon(result.defects[0].type)}
+                      {result.defects[0].type}
+                    </div>
+                    <div className="text-xs text-slate-500 mt-1">
+                      Primary Issue Detected
+                    </div>
+                  </div>
+                ) : <p>No Defects</p>}
               </div>
             </div>
           </div>
 
-          {/* --- 2. AI SUMMARY --- */}
-          <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-6">
-            <h3 className="flex items-center gap-2 font-semibold text-blue-900 mb-2">
-              <FileText size={18} /> AI Assessment Summary
-            </h3>
-            <p className="text-blue-800/80 leading-relaxed text-sm">
-              {result.summary || "Analysis complete."}
-            </p>
-          </div>
+          {/* 2. AI REMEDY SECTION (Button OR Card) */}
+          <div className="transition-all duration-300">
+            {/* STATE A: Show Button if no remedies yet */}
+            {!remedies && !isRemedyLoading && (
+              <button
+                onClick={handleGenerateRemedy}
+                className="w-full group relative overflow-hidden bg-gradient-to-r from-emerald-600 to-teal-600 text-white p-4 rounded-2xl shadow-lg shadow-emerald-200/50 hover:shadow-emerald-300/50 transition-all active:scale-[0.98]"
+              >
+                <div className="relative z-10 flex items-center justify-center gap-3 font-semibold text-lg">
+                  <Sparkles className="w-5 h-5 animate-pulse" />
+                  Generate Professional Repair Plan
+                  <ArrowRight className="w-5 h-5 opacity-70 group-hover:translate-x-1 transition-transform" />
+                </div>
+                {/* Shine effect */}
+                <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+              </button>
+            )}
 
-          {/* --- 3. DETAILED DEFECTS LIST --- */}
-          <div className="space-y-3">
-            <h3 className="font-semibold text-slate-900 ml-1">Detected Conditions</h3>
-            
-            {Array.isArray(result.defects) && result.defects.length > 0 ? (
-              result.defects.map((defect, idx) => (
-                <DefectCard key={idx} defect={defect} index={idx} />
-              ))
-            ) : (
-              <p className="text-slate-500 italic p-4 text-center border-2 border-dashed rounded-xl">
-                No major defects detected. Wall appears normal.
-              </p>
+            {/* STATE B: Error Message */}
+            {error && (
+              <div className="text-red-500 text-sm text-center p-2 bg-red-50 rounded-lg border border-red-100 mb-4">
+                {error}
+              </div>
+            )}
+
+            {/* STATE C: The Remedy Card (Loading OR Content) */}
+            {(remedies || isRemedyLoading) && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm relative overflow-hidden"
+              >
+                <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500" />
+
+                <h3 className="flex items-center gap-2 font-bold text-slate-800 mb-4">
+                  <div className="bg-emerald-100 p-2 rounded-lg text-emerald-700">
+                    <Hammer size={18} />
+                  </div>
+                  Engineer Recommendation
+                </h3>
+
+                <div className="text-slate-600 text-sm leading-relaxed whitespace-pre-line">
+                  {isRemedyLoading ? (
+                    <div className="space-y-3 animate-pulse">
+                      <div className="h-4 bg-slate-100 rounded w-3/4"></div>
+                      <div className="h-4 bg-slate-100 rounded w-full"></div>
+                      <div className="h-4 bg-slate-100 rounded w-5/6"></div>
+                      <div className="h-4 bg-slate-100 rounded w-2/3"></div>
+                    </div>
+                  ) : (
+                    remedies
+                  )}
+                </div>
+              </motion.div>
             )}
           </div>
 
-          {/* --- 4. EXPORT ACTION --- */}
-          <button className="w-full py-3 border border-slate-200 rounded-xl font-medium text-slate-600 hover:bg-slate-50 transition-colors flex items-center justify-center gap-2">
-            Export Full PDF Report <ArrowRight size={16} />
-          </button>
+          {/* 3. DEFECT LIST */}
+          <div className="space-y-3">
+            <h3 className="font-semibold text-slate-900 ml-1">Detected Conditions</h3>
+            {result.defects?.map((defect, idx) => (
+              <DefectCard key={idx} defect={defect} index={idx} />
+            ))}
+          </div>
+
         </motion.div>
       ) : (
-        /* EMPTY / LOADING STATE */
-        <motion.div
-          key="empty"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="h-full min-h-[400px] border-2 border-dashed border-slate-200 rounded-3xl p-8 flex flex-col items-center justify-center text-center text-slate-400"
-        >
-          {isLoading ? (
-             <p className="animate-pulse font-medium text-blue-500">Processing visual data...</p>
-          ) : (
-            <>
-              <div className="bg-slate-50 p-4 rounded-full mb-4">
-                <Activity size={32} />
-              </div>
-              <p>Upload an image and run analysis<br />to detect cracks, spalling, or vegetation.</p>
-            </>
-          )}
-        </motion.div>
+        /* LOADING STATE */
+        <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-200 rounded-3xl">
+          {isLoading ? <p className="animate-pulse">Analyzing...</p> : <p>Upload an image to start</p>}
+        </div>
       )}
     </AnimatePresence>
   );
