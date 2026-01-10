@@ -1,25 +1,27 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
 import { FileText, ArrowRight, AlertTriangle, Leaf, Droplets, Activity, Sparkles, Hammer } from "lucide-react";
 import HealthRing from "./HealthRing";
 import DefectCard from "./DefectCard";
 
 export default function ResultsPanel({ result, isLoading }) {
-  const [remedies, setRemedies] = useState(null);
-  const [isRemedyLoading, setIsRemedyLoading] = useState(false);
-  const [error, setError] = useState(null);
+  // 1. STATE DEFINITIONS (Only once!)
   const [remedies, setRemedies] = useState(null);
   const [isRemedyLoading, setIsRemedyLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  React.useEffect(() => {
-    setRemedies(null);       // Clear the old text
-    setError(null);          // Clear old errors
+  // 2. AUTO-RESET EFFECT
+  // This watches for new results. When a new image is analyzed,
+  // it wipes the old remedy text so the "Generate" button comes back.
+  useEffect(() => {
+    setRemedies(null);       
+    setError(null);          
     setIsRemedyLoading(false); 
-  }, [result]);
-  // --- MANUAL TRIGGER FUNCTION ---
+  }, [result]); 
+
+  // 3. MANUAL TRIGGER FUNCTION
   const handleGenerateRemedy = async () => {
     if (!result || result.error) return;
 
@@ -79,7 +81,7 @@ export default function ResultsPanel({ result, isLoading }) {
           animate={{ opacity: 1, x: 0 }}
           className="space-y-6"
         >
-          {/* 1. SCORE CARD */}
+          {/* A. SCORE CARD */}
           <div className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200/50 border border-slate-100">
             <div className="flex items-center justify-between mb-6">
               <div>
@@ -110,9 +112,9 @@ export default function ResultsPanel({ result, isLoading }) {
             </div>
           </div>
 
-          {/* 2. AI REMEDY SECTION (Button OR Card) */}
+          {/* B. AI REMEDY SECTION */}
           <div className="transition-all duration-300">
-            {/* STATE A: Show Button if no remedies yet */}
+            {/* 1. Show Button if no remedies yet */}
             {!remedies && !isRemedyLoading && (
               <button
                 onClick={handleGenerateRemedy}
@@ -123,19 +125,18 @@ export default function ResultsPanel({ result, isLoading }) {
                   Generate Professional Repair Plan
                   <ArrowRight className="w-5 h-5 opacity-70 group-hover:translate-x-1 transition-transform" />
                 </div>
-                {/* Shine effect */}
                 <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
               </button>
             )}
 
-            {/* STATE B: Error Message */}
+            {/* 2. Error Message */}
             {error && (
               <div className="text-red-500 text-sm text-center p-2 bg-red-50 rounded-lg border border-red-100 mb-4">
                 {error}
               </div>
             )}
 
-            {/* STATE C: The Remedy Card (Loading OR Content) */}
+            {/* 3. The Remedy Card */}
             {(remedies || isRemedyLoading) && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
@@ -157,7 +158,6 @@ export default function ResultsPanel({ result, isLoading }) {
                       <div className="h-4 bg-slate-100 rounded w-3/4"></div>
                       <div className="h-4 bg-slate-100 rounded w-full"></div>
                       <div className="h-4 bg-slate-100 rounded w-5/6"></div>
-                      <div className="h-4 bg-slate-100 rounded w-2/3"></div>
                     </div>
                   ) : (
                     remedies
@@ -167,7 +167,7 @@ export default function ResultsPanel({ result, isLoading }) {
             )}
           </div>
 
-          {/* 3. DEFECT LIST */}
+          {/* C. DEFECT LIST */}
           <div className="space-y-3">
             <h3 className="font-semibold text-slate-900 ml-1">Detected Conditions</h3>
             {result.defects?.map((defect, idx) => (

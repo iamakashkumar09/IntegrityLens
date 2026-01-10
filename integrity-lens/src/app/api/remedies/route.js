@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 export async function POST(req) {
     try {
         // 1. API KEY
-        const apiKey = "AIzaSyCHDfUvwi_-x3z9ktaLLvM-jpHUBL3loCI";
+        const apiKey = "AIzaSyC1ZuEZavuWNHC0Cp1W5S9vMFrBzs58pCI";
 
         const body = await req.json();
         const { defectType, score } = body;
